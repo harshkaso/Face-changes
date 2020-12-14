@@ -32,6 +32,7 @@ YELLOW = 16
 GREEN = 26
 fullscreen_state = False
 BG_COLOR = "#dfedfa"
+CASCADE = "haarcascade.xml"
 BACK_ICON = os.path.dirname(os.path.abspath(__file__)) + "/icons/back.png"
 MANCAP_ICON = os.path.dirname(os.path.abspath(__file__)) + "/icons/mancap.png"
 LOGOUT_ICON = os.path.dirname(os.path.abspath(__file__)) + "/icons/logout.png"
@@ -434,7 +435,6 @@ class CaptureDataset(object):
         
     def videoloop(self):
         try:
-            CASCADE = "haarcascade.xml"
             INTERVAL = 1.5
             self.NIMAGES = 15
             detector = cv2.CascadeClassifier(CASCADE)
@@ -809,11 +809,17 @@ class Manual(Frame):
 
         self.label = Label(self)
         self.f = face(companyname)
+        self.vs = self.f.vs
+        self.live = Livefeed(self.vs)
+        thread.start_new_thread(self.live.livefeed, ())
+
+
                 
     def back(self, controller, companyname):
         GPIO.output(26,GPIO.LOW)
         GPIO.output(16,GPIO.LOW)
         GPIO.output(12,GPIO.LOW)
+        self.live.end_livefeed()
         controller.show_frame(Mode, [companyname])
         
     
@@ -832,6 +838,7 @@ class Manual(Frame):
             self.mancap['state'] = 'disabled'
             self.update_idletasks()
             empId, detectedTime = self.f.recognize()
+            self.live.pause_livefeed()
             message = "Please try again"
             if empId != "unknown":
                 status, msg, self.empCode, self.name = service.getEmployee(empId)
@@ -854,6 +861,7 @@ class Manual(Frame):
             self.label = Label(window, text=message, bg=BG_COLOR , font="Helvetica 18")
             self.label.place(relx=0.5, rely=0.35, anchor=CENTER)
             self.label.after(2000, self.handleLabel)
+            self.live.resume_livefeed()
 
     def confirmName(self, name):
         self.w = confirmNamePopup(name)
@@ -951,6 +959,67 @@ class LogoutPopup:
 
     def cleanup(self):
         utility.hide_keyboard()
+        self.top.destroy()
+
+class Livefeed:
+    def __init__(self, vs):
+        self.vs = vs
+        self.running = True
+        top = self.top = Toplevel(window)
+        top.withdraw()
+        top.attributes('-topmost', True)
+        top.title("Capture Dataset")
+        top.configure(bg=BG_COLOR)
+        
+
+    def livefeed(self):
+        try:
+            detector = cv2.CascadeClassifier(CASCADE)
+            self.vs = VideoStream(usePiCamera=True).start()
+            time.sleep(0.1)
+            start_time = time.time()
+            while self.running:
+                frame = self.vs.read()
+                orig = frame.copy()
+                frame = imutils.resize(frame, width=400)
+                rects = detector.detectMultiScale(
+                    cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), scaleFactor=1.1, 
+                    minNeighbors=5, minSize=(30, 30))
+                for (x, y, w, h) in rects:
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                
+                img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(img)
+                img = ImageTk.PhotoImage(img)
+                if self.display == None:
+                    self.display = Label(self.top, image=img, bg=BG_COLOR, relief="ridge")
+                    self.display.image = img
+                    self.display.grid(row=0, column=0, columnspan=2, sticky=W+E+N+S, padx = 20, pady= 20)
+                    self.top.update()
+                    w = self.top.winfo_width()
+                    h = self.top.winfo_height()
+                    ws = self.top.winfo_screenwidth()
+                    hs = self.top.winfo_screenheight()
+                    x = (ws/2) - (w/2)
+                    y = (hs/2) - (h/2)
+                    self.top.geometry('%dx%d+%d+%d' % (w, h, x, y))
+                    self.top.deiconify()
+                else:
+                    self.display.configure(image = img)
+                    self.display.image = img
+        except Exception as e:
+            print("[WARN] Exception occured in non tkinter thread: ", e)
+    
+    def pause_livefeed(self):
+        self.running = False
+    
+    def resume_livefeed(self):
+        if not self.running:
+            self.running = True
+            self.livefeed()
+    
+    def end_livefeed(self):
+        self.running = False
         self.top.destroy()
 
 class Utility:
