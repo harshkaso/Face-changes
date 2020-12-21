@@ -971,6 +971,7 @@ class Livefeed:
     def __init__(self, vs):
         self.vs = vs
         self.running = True
+        self.display = None
         top = self.top = Toplevel(window)
         top.withdraw()
         top.attributes('-topmost', True)
