@@ -981,8 +981,6 @@ class Livefeed:
     def livefeed(self):
         try:
             detector = cv2.CascadeClassifier(CASCADE)
-            self.vs = VideoStream(usePiCamera=True).start()
-            time.sleep(0.1)
             start_time = time.time()
             while self.running:
                 frame = self.vs.read()
