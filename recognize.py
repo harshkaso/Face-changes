@@ -23,10 +23,11 @@ from os.path import dirname, abspath
 
 class face:
 
-    def __init__(self, company):
+    def __init__(self, company, vs):
         self.company = company
         self.detected = False
         self.date = None
+        self.vs = vs
     
     def recognize(self):
         try:
@@ -54,10 +55,11 @@ class face:
             # initialize the video stream, then allow the camera sensor to warm up
             print("[INFO] starting video stream...")
             # vs = VideoStream(src=-1).start()
-            self.vs = VideoStream(usePiCamera=True).start()
+            #######################################
+            # self.vs = VideoStream(usePiCamera=True).start()
         
-            time.sleep(2.0)
-
+            # time.sleep(2.0)
+            #######################################
             # start the FPS throughput estimator
             fps = FPS().start()
             counter = 0
