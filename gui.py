@@ -12,13 +12,18 @@ from tkinter.ttk import Progressbar, Combobox
 
 import os
 import sys
+import csv
 import cv2
 import time
+import pickle
 import imutils 
+import datetime
 import subprocess
+import numpy as np
 import _thread as thread
 from recognize import face
 from datetime import datetime
+from imutils.video import FPS
 from imutils.video import VideoStream
 
 
@@ -808,8 +813,9 @@ class Manual(Frame):
         company.place(relx=0.5, rely=0.15, anchor=CENTER)
 
         self.label = Label(self)
-        self.f = face(companyname)
-        self.vs = self.f.vs
+        self.vs = VideoStream(usePiCamera=True).start()
+        time.sleep(2.0)
+        self.f = face(companyname, self.vs)
         self.live = Livefeed(self.vs)
         thread.start_new_thread(self.live.livefeed, ())
 
